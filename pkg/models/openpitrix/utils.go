@@ -841,6 +841,7 @@ func filterOperatorApps(operatorApps []*v1alpha1.OperatorApplication, conditions
 	}
 	return operatorApps[:curr:curr]
 }
+
 func filterReleaseByStates(rls *v1alpha1.HelmRelease, state []string) bool {
 	if len(state) == 0 {
 		return true

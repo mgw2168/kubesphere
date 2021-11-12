@@ -903,7 +903,7 @@ type CreateManifestRequest struct {
 	Version int `json:"version"`
 
 	// version of db operator
-	OperatorVersion string `json:"operatorVersion"`
+	OperatorVersion string `json:"appVersion"`
 
 	// custom resource
 	CustomResource string `json:"customResource"`

@@ -18,12 +18,11 @@ package resource
 
 import (
 	"errors"
-	"kubesphere.io/kubesphere/pkg/models/resources/v1alpha3/manifest"
-
 	snapshotv1beta1 "github.com/kubernetes-csi/external-snapshotter/client/v3/apis/volumesnapshot/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	dmpmanifest "kubesphere.io/kubesphere/pkg/models/resources/v1alpha3/openpitrix/manifest"
 	monitoringdashboardv1alpha2 "kubesphere.io/monitoring-dashboard/api/v1alpha2"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 
@@ -139,6 +138,9 @@ func NewResourceGetter(factory informers.InformerFactory, cache cache.Cache) *Re
 	clusterResourceGetters[notificationv2beta1.SchemeGroupVersion.WithResource(notificationv2beta1.ResourcesPluralReceiver)] = notification.NewNotificationReceiverGetter(factory.KubeSphereSharedInformerFactory())
 	clusterResourceGetters[monitoringdashboardv1alpha2.GroupVersion.WithResource("clusterdashboards")] = clusterdashboard.New(cache)
 
+	// DMP custom resources
+	clusterResourceGetters[schema.GroupVersionResource{Group: "application.kubesphere.io", Version: "v1alpha1", Resource: "manifests"}] = dmpmanifest.New(factory.KubeSphereSharedInformerFactory())
+
 	// federated resources
 	namespacedResourceGetters[typesv1beta1.SchemeGroupVersion.WithResource(typesv1beta1.ResourcePluralFederatedNamespace)] = federatednamespace.New(factory.KubeSphereSharedInformerFactory())
 	namespacedResourceGetters[typesv1beta1.SchemeGroupVersion.WithResource(typesv1beta1.ResourcePluralFederatedDeployment)] = federateddeployment.New(factory.KubeSphereSharedInformerFactory())
@@ -150,9 +152,6 @@ func NewResourceGetter(factory informers.InformerFactory, cache cache.Cache) *Re
 	namespacedResourceGetters[typesv1beta1.SchemeGroupVersion.WithResource(typesv1beta1.ResourcePluralFederatedStatefulSet)] = federatedstatefulset.New(factory.KubeSphereSharedInformerFactory())
 	namespacedResourceGetters[typesv1beta1.SchemeGroupVersion.WithResource(typesv1beta1.ResourcePluralFederatedIngress)] = federatedingress.New(factory.KubeSphereSharedInformerFactory())
 	namespacedResourceGetters[monitoringdashboardv1alpha2.GroupVersion.WithResource("dashboards")] = dashboard.New(cache)
-
-	// DMP custom resources
-	namespacedResourceGetters[schema.GroupVersionResource{Group: "application", Version: "v1alpha1", Resource: "manifests"}] = manifest.New(factory.KubeSphereSharedInformerFactory())
 
 	return &ResourceGetter{
 		namespacedResourceGetters: namespacedResourceGetters,

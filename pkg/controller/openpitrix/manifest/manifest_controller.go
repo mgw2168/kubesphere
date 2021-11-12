@@ -20,8 +20,9 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	clusterv1alpha1 "kubesphere.io/api/cluster/v1alpha1"
 	"time"
+
+	clusterv1alpha1 "kubesphere.io/api/cluster/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -31,10 +32,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"kubesphere.io/api/application/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
 	"kubesphere.io/kubesphere/pkg/client/informers/externalversions"
 	"kubesphere.io/kubesphere/pkg/utils/clusterclient"
 	"kubesphere.io/kubesphere/pkg/utils/sliceutil"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -225,8 +227,7 @@ func (r *ManifestReconciler) deleteCluster(ctx context.Context, resource *v1alph
 }
 
 func (r *ManifestReconciler) installCluster(ctx context.Context, resource *v1alpha1.Manifest) error {
-	klog.Infof("install cluster: %s, %s, %s", resource.Namespace, resource.Name, resource.Spec.Kind)
-
+	klog.Infof("install cluster: %s, %s, %s", resource.Spec.Namespace, resource.Name, resource.Spec.Kind)
 	cli, err := r.newClusterClient(resource.GetManifestCluster())
 	if err != nil {
 		return err
@@ -250,13 +251,13 @@ func (r *ManifestReconciler) installCluster(ctx context.Context, resource *v1alp
 	if err != nil {
 		klog.Errorf("create cluster error: %s, %s, %s", err, obj.GetNamespace(), obj.GetName())
 		resource.Status.ResourceState = v1alpha1.Error
-		err = cli.Status().Update(ctx, resource)
+		err = r.Status().Update(ctx, resource)
 		return err
 	}
 	resource.Status.State = v1alpha1.ManifestCreated
 	resource.Status.ResourceState = v1alpha1.FrontCreating
 	resource.Status.Version = resource.Spec.Version
-	err = cli.Status().Update(ctx, resource)
+	err = r.Status().Update(ctx, resource)
 	if err != nil {
 		klog.Errorf("update manifest status error: %s", err)
 		return err
@@ -294,7 +295,7 @@ func (r *ManifestReconciler) createOrDeleteMysqlClusterPasswordSecret(ctx contex
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      resource.Name + v1alpha1.SuffixSecretName,
-			Namespace: resource.Namespace,
+			Namespace: resource.Spec.Namespace,
 		},
 	}
 	if delete {
@@ -306,14 +307,14 @@ func (r *ManifestReconciler) createOrDeleteMysqlClusterPasswordSecret(ctx contex
 }
 
 func (r *ManifestReconciler) checkResourceStatus(ctx context.Context, resource *v1alpha1.Manifest) (ctrl.Result, error) {
-	klog.V(1).Infof("do check status: %s, %s, %s", resource.Namespace, resource.Name, resource.Spec.Kind)
+	klog.V(1).Infof("do check status: %s, %s, %s", resource.Spec.Namespace, resource.Name, resource.Spec.Kind)
 	obj, err := getUnstructuredObj(resource)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	err = r.Get(ctx, types.NamespacedName{
-		Namespace: resource.Namespace,
+		Namespace: resource.Spec.Namespace,
 		Name:      resource.Name}, obj)
 	if err != nil {
 		klog.V(1).Info(err.Error())
@@ -369,7 +370,7 @@ func getUnstructuredObj(resource *v1alpha1.Manifest) (obj *unstructured.Unstruct
 		klog.Errorf("decode unstructured object error: %s", err.Error())
 	}
 	obj.SetName(resource.Name)
-	obj.SetNamespace(resource.Namespace)
+	obj.SetNamespace(resource.Spec.Namespace)
 	return
 }
 
@@ -387,6 +388,11 @@ func getUnstructuredObjStatus(obj *unstructured.Unstructured) string {
 }
 
 func (r *ManifestReconciler) getPostgresPassword(manifest *v1alpha1.Manifest, obj *unstructured.Unstructured) error {
+	cli, err := r.newClusterClient(manifest.GetManifestCluster())
+	if err != nil {
+		return err
+	}
+
 	time.Sleep(500 * time.Millisecond)
 	secret := &corev1.Secret{
 		TypeMeta:   metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
@@ -416,7 +422,7 @@ func (r *ManifestReconciler) getPostgresPassword(manifest *v1alpha1.Manifest, ob
 		}
 	}
 
-	err = r.Get(context.TODO(), types.NamespacedName{
+	err = cli.Get(context.TODO(), types.NamespacedName{
 		Namespace: obj.GetNamespace(),
 		Name:      obj.GetName(),
 	}, obj)
@@ -424,7 +430,7 @@ func (r *ManifestReconciler) getPostgresPassword(manifest *v1alpha1.Manifest, ob
 		return client.IgnoreNotFound(err)
 	}
 	obj.Object["spec"] = spec
-	err = r.Patch(context.TODO(), obj, client.Merge)
+	err = cli.Patch(context.TODO(), obj, client.Merge)
 	if err != nil {
 		klog.Errorf("patch postgresqlcluster resource error: %s", err)
 	}

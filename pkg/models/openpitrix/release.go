@@ -474,14 +474,19 @@ func (c *releaseOperator) getAppVersionWithData(repoId, id string) (ret *v1alpha
 
 // manifest
 func (c *releaseOperator) CreateManifest(workspace, clusterName, namespace string, request CreateManifestRequest) error {
-	version, err := c.getOperatorAppVersion(request.OperatorVersion)
+	dbType := map[string]string{
+		"ClickHouseInstallation": "clickhouse",
+		"MysqlCluster": "mysql",
+		"PostgreSQLCluster": "postgresql",
+	}
+	version, err := c.getOperatorAppVersion(dbType[request.Kind])
 
 	if err != nil {
 		klog.Errorf("get operator version %s failed, error: %v", request.OperatorVersion, err)
 		return err
 	}
 
-	exists, err := c.manifestExists(workspace, clusterName, namespace, clusterName)
+	exists, err := c.manifestExists(workspace, clusterName, namespace, request.Name)
 
 	if err != nil && !apierrors.IsNotFound(err) {
 		klog.Errorf("get manifest %s failed, error: %v", clusterName, err)
@@ -494,7 +499,7 @@ func (c *releaseOperator) CreateManifest(workspace, clusterName, namespace strin
 		return err
 	}
 
-	manifest := &v1alpha1.Manifest{
+	mft := &v1alpha1.Manifest{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: request.Name,
 			Annotations: map[string]string{
@@ -514,25 +519,23 @@ func (c *releaseOperator) CreateManifest(workspace, clusterName, namespace strin
 			Version:        request.Version,
 			CustomResource: request.CustomResource,
 		},
-		Status: v1alpha1.ManifestStatus{},
 	}
 
 	if clusterName != "" {
-		manifest.Labels[constants.ClusterNameLabelKey] = clusterName
+		mft.Labels[constants.ClusterNameLabelKey] = clusterName
 	}
 
 	// dbType: mysql, postgresql, clickhouse
 	if dbType := version.GetOperatorVersionType(); dbType != "" {
-		manifest.Labels[constants.OperatorAppLabelKey] = dbType
+		mft.Labels[constants.OperatorAppLabelKey] = dbType
 	}
 
-	manifest, err = c.manifestClient.Create(context.TODO(), manifest, metav1.CreateOptions{})
-
+	mft, err = c.manifestClient.Create(context.TODO(), mft, metav1.CreateOptions{})
 	if err != nil {
 		klog.Errorln(err)
 		return err
 	} else {
-		klog.Infof("create manifest %s success in %s", request.Name, clusterName)
+		klog.Infof("create manifest %s success in %s", mft.Name, clusterName)
 	}
 
 	return nil

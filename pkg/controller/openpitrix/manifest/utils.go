@@ -37,16 +37,16 @@ func convertObjState(state string) (frontState string) {
 	return
 }
 
+
 func (r *ManifestReconciler) newClusterClient(clusterName string) (client.Client, error) {
 	var clusterCli client.Client
-	clusterInfo, err := r.clusterClients.Get(clusterName)
-	if err != nil {
-		klog.Errorf("get cluster(%s) info error: %s", clusterName, err)
-		return nil, err
-	}
-	if !r.clusterClients.IsHostCluster(clusterInfo) {
-		clusterCli = r.Client
-	} else {
+	if r.MultiClusterEnable && clusterName != "" {
+		clusterInfo, err := r.clusterClients.Get(clusterName)
+		if err != nil {
+			klog.Errorf("get cluster(%s) info error: %s", clusterName, err)
+			return nil, err
+		}
+
 		config, err := clientcmd.RESTConfigFromKubeConfig(clusterInfo.Spec.Connection.KubeConfig)
 		if err != nil {
 			klog.Errorf("get cluster config error: %s", err)
@@ -57,6 +57,8 @@ func (r *ManifestReconciler) newClusterClient(clusterName string) (client.Client
 			klog.Errorf("get cluster client with kubeconfig error: %s", err)
 			return nil, err
 		}
+	} else {
+		return r.Client, nil
 	}
 	return clusterCli, nil
 }

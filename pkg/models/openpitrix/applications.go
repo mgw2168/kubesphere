@@ -335,7 +335,7 @@ func (c *applicationOperator) ListApps(conditions *params.Conditions, orderBy st
 		totalCount = totalCount + len(operatorApps)
 	}
 	for i := range operatorApps {
-		versions, err := c.getAppVersionByAppLabel(operatorApps[i].Name)
+		versions, err := c.getOperatorAppVersionByAppLabel(operatorApps[i].Name)
 		if err != nil && !apierrors.IsNotFound(err) {
 			return nil, err
 		}
@@ -620,7 +620,7 @@ func (c *applicationOperator) DescribeApp(id string) (*App, error) {
 			return nil, err
 		}
 
-		operatorVersions, err := c.getAppVersionByAppLabel(operatorApp.Name)
+		operatorVersions, err := c.getOperatorAppVersionByAppLabel(operatorApp.Name)
 		if err != nil {
 			klog.Error(err)
 			return nil, err

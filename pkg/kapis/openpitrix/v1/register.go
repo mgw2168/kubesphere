@@ -665,7 +665,7 @@ func AddToContainer(c *restful.Container, ksInfomrers informers.InformerFactory,
 		To(handler.ModifyManifest).
 		Doc("Modify manifests").
 		Metadata(restfulspec.KeyOpenAPITags, []string{constants.NamespaceResourcesTag}).
-		Reads(openpitrix.ModifyClusterAttributesRequest{}).
+		Reads(openpitrix.ModifyManifestRequest{}).
 		Returns(http.StatusOK, api.StatusOK, errors.Error{}).
 		Param(webservice.PathParameter("cluster", "the name of the cluster.").Required(true)).
 		Param(webservice.PathParameter("namespace", "the name of the project").Required(true)).
@@ -681,7 +681,7 @@ func AddToContainer(c *restful.Container, ksInfomrers informers.InformerFactory,
 		Param(webservice.PathParameter("namespace", "the name of the project").Required(true)).
 		Param(webservice.PathParameter("manifest", "the id of the manifest").Required(true)))
 
-	webservice.Route(webservice.GET("/clusters/{cluster}/manifests").
+	webservice.Route(webservice.GET("/workspaces/{workspace}/namespaces/{namespace}/manifests").
 		To(handler.ListManifests).
 		Returns(http.StatusOK, api.StatusOK, models.PageableResponse{}).
 		Metadata(restfulspec.KeyOpenAPITags, []string{constants.NamespaceResourcesTag}).

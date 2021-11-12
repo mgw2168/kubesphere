@@ -610,7 +610,7 @@ func (c *applicationOperator) getAppVersionsByAppId(appId string) (ret []*v1alph
 	return
 }
 
-func (c *applicationOperator) getAppVersionByAppLabel(appLabel string) (ret []*v1alpha1.OperatorApplicationVersion, err error) {
+func (c *applicationOperator) getOperatorAppVersionByAppLabel(appLabel string) (ret []*v1alpha1.OperatorApplicationVersion, err error) {
 	ret, err = c.operatorAppVersionLister.List(labels.SelectorFromSet(map[string]string{constants.OperatorAppLabelKey: appLabel}))
 	if err != nil && !apierrors.IsNotFound(err) {
 		klog.Error(err)

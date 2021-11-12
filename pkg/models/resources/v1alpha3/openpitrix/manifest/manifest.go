@@ -17,6 +17,7 @@ limitations under the License.
 package manifest
 
 import (
+	"strings"
 	"k8s.io/apimachinery/pkg/runtime"
 	"kubesphere.io/api/application/v1alpha1"
 	"kubesphere.io/kubesphere/pkg/api"
@@ -82,6 +83,10 @@ func (c manifestGetter) filter(object runtime.Object, filter query.Filter) bool 
 	if !ok {
 		return false
 	}
-
-	return v1alpha3.DefaultObjectMetaFilter(manifest.ObjectMeta, filter)
+	switch filter.Field {
+	case query.FieldStatus:
+		return strings.Contains(manifest.Status.State, string(filter.Value))
+	default:
+		return v1alpha3.DefaultObjectMetaFilter(manifest.ObjectMeta, filter)
+	}
 }
